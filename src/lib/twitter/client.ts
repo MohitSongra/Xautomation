@@ -85,6 +85,47 @@ export class TwitterClient {
   }
 
   /**
+   * Publish a thread of tweets sequentially
+   */
+  async publishThread(tweets: string[]) {
+    try {
+      if (tweets.length === 0) throw new Error("No tweets provided for thread");
+      
+      const publishedTweetIds: string[] = [];
+      let replyToId: string | undefined = undefined;
+      const rawResponses = [];
+      
+      for (const tweetContent of tweets) {
+        const res = await this.publishTweet(tweetContent, replyToId);
+        if (!res.success || !res.tweetId) {
+          throw new Error(res.error || "Failed to publish a tweet in the thread");
+        }
+        publishedTweetIds.push(res.tweetId);
+        replyToId = res.tweetId;
+        rawResponses.push(res.rawResponse);
+        // Small delay to ensure correct ordering on X
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      
+      return {
+        success: true,
+        tweetId: publishedTweetIds[0], // Thread starting tweet ID
+        threadTweetIds: publishedTweetIds,
+        rawResponse: rawResponses
+      };
+    } catch (error: unknown) {
+      console.error("Failed to publish thread:", error);
+      return {
+        success: false,
+        error: getErrorMessage(
+          error,
+          "Unknown error occurred while publishing thread"
+        )
+      };
+    }
+  }
+
+  /**
    * Fetch engagement stats for a given tweet ID
    */
   async getTweetStats(tweetId: string) {

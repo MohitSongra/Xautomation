@@ -7,6 +7,10 @@ type ScheduledPostRow = {
   id: string;
   user_id: string;
   content: string | null;
+  tweet_drafts?: {
+    tweet_type?: string;
+    thread_content?: string[];
+  } | null;
   profiles?: {
     x_cookies?: unknown;
   } | null;
@@ -46,7 +50,7 @@ export async function GET(request: Request) {
     // 3. Fetch pending scheduled posts
     const { data: posts, error: fetchError } = await supabase
       .from("scheduled_posts")
-      .select("*, profiles(x_cookies)")
+      .select("*, tweet_drafts(tweet_type, thread_content), profiles(x_cookies)")
       .eq("status", "pending")
       .lte("scheduled_for", new Date().toISOString());
 
@@ -76,8 +80,17 @@ export async function GET(request: Request) {
         // Initialize TwitterClient with user cookies
         await twitterClient.setCookies(cookies);
         
-        // Publish tweet
-        const res = await twitterClient.publishTweet(content);
+        const isThread = post.tweet_drafts?.tweet_type === "thread" && 
+          Array.isArray(post.tweet_drafts?.thread_content) && 
+          post.tweet_drafts.thread_content.length > 0;
+          
+        // Publish
+        let res;
+        if (isThread) {
+          res = await twitterClient.publishThread(post.tweet_drafts!.thread_content!);
+        } else {
+          res = await twitterClient.publishTweet(content);
+        }
 
         if (res.success) {
           // Update status to published
@@ -92,7 +105,7 @@ export async function GET(request: Request) {
             scheduled_post_id: post.id,
             x_tweet_id: res.tweetId || `unknown-${Date.now()}`,
             content: content,
-            tweet_type: "tweet",
+            tweet_type: isThread ? "thread" : "tweet",
             published_at: new Date().toISOString(),
             raw_response: res.rawResponse || {}
           });
