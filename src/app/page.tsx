@@ -52,11 +52,8 @@ export default function LandingPage() {
           <span className="text-lg font-bold text-text-primary">Xautomation</span>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/login">
-            <Button variant="ghost" size="sm">Log in</Button>
-          </Link>
-          <Link href="/signup">
-            <Button size="sm">Get Started</Button>
+          <Link href="/overview">
+            <Button size="sm">Go to Dashboard</Button>
           </Link>
         </div>
       </nav>
@@ -98,16 +95,11 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="mt-10 flex flex-col items-center gap-4 sm:flex-row"
+            className="mt-10"
           >
-            <Link href="/signup">
-              <Button size="lg" icon={<ArrowRight className="h-4 w-4" />}>
-                Get Started Free
-              </Button>
-            </Link>
             <Link href="/overview">
-              <Button variant="secondary" size="lg">
-                View Dashboard
+              <Button size="lg" icon={<ArrowRight className="h-4 w-4" />}>
+                Go to Dashboard
               </Button>
             </Link>
           </motion.div>

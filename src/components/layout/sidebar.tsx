@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Zap,
@@ -13,7 +13,6 @@ import {
   Globe,
   Brain,
   Sparkles,
-  LogOut,
   Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,14 +30,6 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
 
   return (
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[260px] flex-col border-r border-border-default bg-bg-secondary/80 backdrop-blur-xl lg:flex">
@@ -91,18 +82,12 @@ export function Sidebar() {
       <div className="border-t border-border-default p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-tertiary text-xs font-medium text-text-secondary">
-            U
+            LA
           </div>
           <div className="flex-1 truncate">
-            <p className="truncate text-sm font-medium text-text-primary">User</p>
-            <p className="truncate text-xs text-text-tertiary">user@email.com</p>
+            <p className="truncate text-sm font-medium text-text-primary">Local Admin</p>
+            <p className="truncate text-xs text-text-tertiary">local@xautomation.app</p>
           </div>
-          <button
-            onClick={handleSignOut}
-            className="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-white/5 hover:text-text-secondary"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
         </div>
       </div>
     </aside>
