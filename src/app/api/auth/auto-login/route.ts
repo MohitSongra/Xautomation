@@ -46,7 +46,9 @@ export async function GET(request: Request) {
         }
       });
       
-      if (signUpError) {
+      const isEmailExists = signUpError && (signUpError as any).status === 422 && (signUpError as any).code === 'email_exists';
+      
+      if (signUpError && !isEmailExists) {
         console.error("Auto-login signup error:", signUpError);
         return NextResponse.json({ error: signUpError.message }, { status: 500 });
       }
