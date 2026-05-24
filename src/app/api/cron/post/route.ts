@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { TwitterClient } from "@/lib/twitter/client";
 import { decryptTwitterCookies } from "@/lib/security/x-cookies";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 
 type ScheduledPostRow = {
   id: string;
@@ -25,16 +26,36 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const postId = searchParams.get("id");
+
+    let isAuthorized = false;
+    let authorizedUserId: string | null = null;
+
     // 1. Verify Vercel Cron authentication
     const authHeader = request.headers.get("authorization");
     if (
       process.env.CRON_SECRET &&
-      authHeader !== `Bearer ${process.env.CRON_SECRET}`
+      authHeader === `Bearer ${process.env.CRON_SECRET}`
     ) {
+      isAuthorized = true;
+    }
+
+    // 2. Verify Session authentication (for manual browser clicks)
+    if (!isAuthorized) {
+      const supabaseServer = await createServerClient();
+      const { data: { user } } = await supabaseServer.auth.getUser();
+      if (user) {
+        isAuthorized = true;
+        authorizedUserId = user.id;
+      }
+    }
+
+    if (!isAuthorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Initialize Supabase service role client (bypasses RLS)
+    // 3. Initialize Supabase service role client (bypasses RLS)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -47,12 +68,25 @@ export async function GET(request: Request) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 3. Fetch pending scheduled posts
-    const { data: posts, error: fetchError } = await supabase
+    // 4. Fetch the target scheduled post(s)
+    let query = supabase
       .from("scheduled_posts")
-      .select("*, tweet_drafts(tweet_type, thread_content), profiles(x_cookies)")
-      .eq("status", "pending")
-      .lte("scheduled_for", new Date().toISOString());
+      .select("*, tweet_drafts(tweet_type, thread_content), profiles(x_cookies)");
+
+    if (postId) {
+      // Single post manual trigger
+      query = query.eq("id", postId);
+      if (authorizedUserId) {
+        query = query.eq("user_id", authorizedUserId);
+      }
+    } else {
+      // Standard hourly cron sweep
+      query = query
+        .eq("status", "pending")
+        .lte("scheduled_for", new Date().toISOString());
+    }
+
+    const { data: posts, error: fetchError } = await query;
 
     if (fetchError) {
       console.error("Failed to fetch scheduled posts:", fetchError);

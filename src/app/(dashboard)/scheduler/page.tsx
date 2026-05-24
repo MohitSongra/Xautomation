@@ -57,14 +57,15 @@ export default function SchedulerPage() {
   const handlePostNow = async (id: string) => {
     // Optimistic update
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, status: "publishing" } : it)));
-    // Real app would call an API route to publish immediately, bypassing cron
-    // For now we just mark it as pending and the cron will pick it up
+    
+    // Mark as pending and update time to now
     await supabase
       .from("scheduled_posts")
       .update({ scheduled_for: new Date().toISOString(), status: "pending" })
       .eq("id", id);
-    // You could manually trigger the cron route here for instant post
-    void fetch("/api/cron/post");
+      
+    // Manually trigger the cron route for this specific post immediately
+    void fetch(`/api/cron/post?id=${id}`);
   };
 
   const handleDelete = async (id: string) => {
