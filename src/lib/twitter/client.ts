@@ -32,16 +32,21 @@ export class TwitterClient {
     this.scraper = new Scraper();
   }
 
-  /**
-   * Initialize the scraper with an array of cookies.
-   */
   async setCookies(cookies: TwitterCookie[]) {
     // agent-twitter-client expects strings in the form of "key=value; domain=..."
     // If the database stores them as an array of objects (like EditThisCookie format),
-    // we convert them to strings.
+    // we convert them to strings and map any x.com domains to twitter.com to prevent errors.
     const cookieStrings = cookies.map((c) => {
-      if (typeof c === "string") return c;
-      return `${c.name ?? ""}=${c.value ?? ""}; Domain=${c.domain ?? ""}; Path=${c.path || "/"}`;
+      if (typeof c === "string") {
+        return c.replace(/Domain=\.?x\.com/i, "Domain=.twitter.com");
+      }
+      
+      let domain = c.domain ?? ".twitter.com";
+      if (domain.includes("x.com")) {
+        domain = domain.replace(/x\.com/g, "twitter.com");
+      }
+      
+      return `${c.name ?? ""}=${c.value ?? ""}; Domain=${domain}; Path=${c.path || "/"}`;
     });
     
     await this.scraper.setCookies(cookieStrings);
